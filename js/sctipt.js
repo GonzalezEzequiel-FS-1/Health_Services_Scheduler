@@ -56,6 +56,19 @@ const NotParkBased = [];
 // Regular expression pattern to extract time and location
 const scheduleRegex = /(\d{1,2}:\d{2}(?:AM|PM)\s*-\s*\d{1,2}:\d{2}(?:AM|PM))\s*(USF|CW|VB|IOA|EPIC)/i;
 
+// Function to calculate total shift duration in minutes
+function calculateTotalShift(employee) {
+    // Convert time in and time out to minutes
+    const timeInParts = employee.TimeIn.split(':').map(part => parseInt(part));
+    const timeOutParts = employee.TimeOut.split(':').map(part => parseInt(part));
+    const timeInMinutes = timeInParts[0] * 60 + timeInParts[1];
+    const timeOutMinutes = timeOutParts[0] * 60 + timeOutParts[1];
+
+    // Calculate total shift duration in minutes
+    const totalShiftMinutes = timeOutMinutes - timeInMinutes;
+    return totalShiftMinutes;
+}
+
 // Iterate through the rows to extract employee information and arrange them based on work location
 for (let rowNum = startRow; rowNum < endRow; rowNum++) {
     const employee = {};
@@ -88,6 +101,9 @@ for (let rowNum = startRow; rowNum < endRow; rowNum++) {
         employee.StatusLead = false;
     }
 
+    // Calculate total shift duration in minutes and add it to the employee object
+    employee.totalShift = calculateTotalShift(employee);
+
     // Push the employee to the corresponding array
     switch (employee.Location) {
         case 'USF':
@@ -107,6 +123,7 @@ for (let rowNum = startRow; rowNum < endRow; rowNum++) {
             break;
     }
 }
+
 
 
 
