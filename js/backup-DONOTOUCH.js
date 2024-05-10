@@ -68,6 +68,8 @@ function calculateTotalShift(employee) {
     const totalShiftMinutes = timeOutMinutes - timeInMinutes;
     return totalShiftMinutes;
 }
+
+
 // Iterate through the rows to extract employee information and arrange them based on work location
 for (let rowNum = startRow; rowNum < endRow; rowNum++) {
     const employee = {};
@@ -75,8 +77,8 @@ for (let rowNum = startRow; rowNum < endRow; rowNum++) {
     employee.Name = sheet[XLSX.utils.encode_cell({ r: rowNum, c: 0 })]?.v || ''; // Column A (Name)
     employee.Job = sheet[XLSX.utils.encode_cell({ r: rowNum, c: 1 })]?.v || ''; // Column B (Job)
     const scheduleText = sheet[XLSX.utils.encode_cell({ r: rowNum, c: 3 })]?.v || ''; // Column D (Schedule)
-    employee.BreakHours = sheet[XLSX.utils.encode_cell({ r: rowNum, c: 9 })]?.v || ''; // Column J (Break Hours)
-    employee.TotalHours = sheet[XLSX.utils.encode_cell({ r: rowNum, c: 11 })]?.v || ''; // Column L (Total Hours)
+    // employee.BreakHours = sheet[XLSX.utils.encode_cell({ r: rowNum, c: 9 })]?.v || ''; // Column J (Break Hours)
+    // employee.TotalHours = sheet[XLSX.utils.encode_cell({ r: rowNum, c: 11 })]?.v || ''; // Column L (Total Hours)
     employee.Notes = sheet[XLSX.utils.encode_cell({ r: rowNum, c: 13 })]?.v || ''; // Column N (Notes)
 
     // Extracting location from the schedule text
@@ -88,16 +90,6 @@ for (let rowNum = startRow; rowNum < endRow; rowNum++) {
     if (timeParts && timeParts.length === 3) {
         employee.TimeIn = timeParts[1];
         employee.TimeOut = timeParts[2];
-
-        // Add 30 minutes to TimeOut
-        const [hours, minutes, period] = employee.TimeOut.split(/:|(?=[AP]M)/); // Split time and period (AM/PM)
-        let newHours = parseInt(hours);
-        let newMinutes = parseInt(minutes) + 30;
-        if (newMinutes >= 60) {
-            newMinutes -= 60;
-            newHours = (newHours + 1) % 12 || 12; // Handle rollover and edge cases
-        }
-        employee.TimeOut = `${newHours}:${newMinutes.toString().padStart(2, '0')}${period}`;
     } else {
         // If unable to extract, set defaults
         employee.TimeIn = '';
@@ -110,12 +102,12 @@ for (let rowNum = startRow; rowNum < endRow; rowNum++) {
     } else {
         employee.StatusLead = false;
     }
-    
+
     // Calculate total shift duration in minutes and add it to the employee object
     employee.totalShift = calculateTotalShift(employee);
 
     // Exclude employees with totalShift === 30
-    if (employee.totalShift !== 30 || employee.totalShift !== 60) {
+    if (employee.totalShift !== 30) {
         // Push the employee to the corresponding array
         switch (employee.Location) {
             case 'USF':
