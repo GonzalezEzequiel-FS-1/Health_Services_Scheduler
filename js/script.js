@@ -16,25 +16,41 @@ const dbConfig = {
 const pool = mysql.createPool(dbConfig);
 
 // Function to clear data from a table
-function clearTable(tableName) {
+function clearTable(tableName, callback) {
     const sql = `DELETE FROM ${tableName}`;
-    
+
     pool.query(sql, (error, results, fields) => {
         if (error) {
             console.error(`Error clearing data from ${tableName}: ${error.message}`);
+            if (callback) {
+                callback(error);
+            }
         } else {
             console.log(`Cleared data from ${tableName}`);
+            if (callback) {
+                callback(null);
+            }
         }
     });
 }
 
-// Clear data from respective tables before inserting new employees
 
-clearTable('universal');
-clearTable('islands');
-clearTable('volcano');
-clearTable('citywalk');
-clearTable('notParkBased');
+// Function to insert employees into the database
+function insertEmployees(employees, tableName, callback) {
+    const columns = ['EmployeeName', 'LeadStatus', 'TimeIn', 'TimeOut', 'Incentive', 'Notes'];
+    const values = employees.map(employee => [employee.Name, employee.StatusLead ? 'Yes' : 'No', employee.TimeIn, employee.TimeOut, '', employee.Notes]);
+    const sql = `INSERT INTO ${tableName} (${columns.join(', ')}) VALUES ?`;
+
+    pool.query(sql, [values], (error, results, fields) => {
+        if (error) {
+            console.error(`Error inserting employees into ${tableName}: ${error.message}`);
+            callback(error);
+        } else {
+            console.log(`Inserted ${results.affectedRows} employees into ${tableName}`);
+            callback(null);
+        }
+    });
+}
 
 // Function to get the latest file in a folder
 function getLatestFile(folderPath) {
@@ -48,6 +64,56 @@ function getLatestFile(folderPath) {
     });
     return latestFile.file;
 }
+
+// Clear data from respective tables before inserting new employees
+clearTable('universal', (error) => {
+    if (!error) {
+        clearTable('islands', (error) => {
+            if (!error) {
+                clearTable('volcano', (error) => {
+                    if (!error) {
+                        clearTable('citywalk', (error) => {
+                            if (!error) {
+                                clearTable('notParkBased', (error) => {
+                                    if (!error) {
+                                        // Get the current directory of the script
+                                        const currentDir = __dirname;
+
+                                        // Specify the folder path where your XLSX files are located (media folder)
+                                        const folderPath = path.join(currentDir, '../media');
+
+                                        // Get the latest XLSX file in the media folder
+                                        const latestFile = getLatestFile(folderPath);
+
+                                        // Load the latest XLSX file
+                                        const workbook = XLSX.readFile(path.join(folderPath, latestFile));
+
+                                        // Choose the first sheet in the workbook
+                                        const sheetName = workbook.SheetNames[0];
+                                        const sheet = workbook.Sheets[sheetName];
+
+                                        // Rest of the code for processing Excel data and inserting employees goes here
+                                    } else {
+                                        console.error("Failed to clear data from 'notParkBased'");
+                                    }
+                                });
+                            } else {
+                                console.error("Failed to clear data from 'citywalk'");
+                            }
+                        });
+                    } else {
+                        console.error("Failed to clear data from 'volcano'");
+                    }
+                });
+            } else {
+                console.error("Failed to clear data from 'islands'");
+            }
+        });
+    } else {
+        console.error("Failed to clear data from 'universal'");
+    }
+});
+
 
 // Get the current directory of the script
 const currentDir = __dirname;
@@ -196,12 +262,37 @@ function insertEmployees(employees, tableName) {
     });
 }
 
-// Insert employees into respective tables
-insertEmployees(UNIVERSAL, 'universal');
-insertEmployees(ISLANDS, 'islands');
-insertEmployees(VolcanoBay, 'volcano');
-insertEmployees(CityWalk, 'citywalk');
-insertEmployees(NotParkBased, 'notParkBased');
+// Clear data from respective tables before inserting new employees
+// clearTable('universal');
+// clearTable('volcano');
+// clearTable('citywalk');
+// clearTable('islands');
+// clearTable('notParkBased');
+
+// Wait for 3 seconds before inserting employees
+setTimeout(() => {
+    // Insert employees into respective tables
+    insertEmployees(UNIVERSAL, 'universal');
+    insertEmployees(VolcanoBay, 'volcano');
+    insertEmployees(CityWalk, 'citywalk');
+    insertEmployees(ISLANDS, 'islands');
+    insertEmployees(NotParkBased, 'notParkBased');
+
+    // Call function to close the database connection after 6 seconds
+    setTimeout(closeConnection, 4000); // 4000 milliseconds = 4 seconds
+}, 3000); // 3000 milliseconds = 3 seconds
+
+// Function to close the database connection
+function closeConnection() {
+    pool.end((error) => {
+        if (error) {
+            console.error(`Error closing the database connection: ${error.message}`);
+        } else {
+            console.log('Database connection closed.');
+        }
+    });
+}
+
 
 // Print the arrays of employees based on work location to the console
 console.log('Employees at UNIVERSAL:');
