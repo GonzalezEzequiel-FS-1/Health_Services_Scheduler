@@ -1,13 +1,14 @@
 {
   "dependencies": {
     "fs": "^0.0.1-security",
+    "moment": "^2.30.1",
+    "mysql": "^2.18.1",
     "path": "^0.12.7",
     "xlsx": "^0.18.5"
   },
   "name": "hs",
   "version": "1.0.0",
   "main": "index.js",
-  "devDependencies": {},
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
