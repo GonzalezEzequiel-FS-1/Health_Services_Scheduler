@@ -52,18 +52,26 @@ function insertEmployees(employees, tableName, callback) {
     });
 }
 
-// Function to get the latest file in a folder
+// Function to get the latest file in a folder based on the date in the file name
 function getLatestFile(folderPath) {
     const files = fs.readdirSync(folderPath);
-    const stats = files.map(file => ({
-        file,
-        mtime: fs.statSync(path.join(folderPath, file)).mtime
-    }));
-    const latestFile = stats.reduce((prev, current) => {
-        return (current.mtime > prev.mtime) ? current : prev;
+    let latestFileName = '';
+    let latestDate = new Date(0); // Initialize with a very old date
+    
+    files.forEach(file => {
+        const match = file.match(/_(\d{4}-\d{2}-\d{2})T/); // Extract the date from the file name
+        if (match) {
+            const fileDate = new Date(match[1]); // Convert the extracted date to a Date object
+            if (fileDate > latestDate) {
+                latestDate = fileDate;
+                latestFileName = file;
+            }
+        }
     });
-    return latestFile.file;
+    
+    return latestFileName;
 }
+
 
 // Clear data from respective tables before inserting new employees
 clearTable('universal', (error) => {
@@ -305,3 +313,4 @@ console.log('Employees at CityWalk:');
 console.log(CityWalk);
 console.log('Employees at Not Park Based:');
 console.log(NotParkBased);
+console.log(`Retrieved latest file: ${latestFile}`); // Log the name of the retrieved file
