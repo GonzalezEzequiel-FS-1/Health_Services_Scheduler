@@ -6,11 +6,11 @@ const path = require('path');
 
 // Database connection configuration
 const dbConfig = {
-host: '23.117.213.174',
-port: 3369,
-user: 'Zeke',
-password: 'TrashPanda6000',
-database: 'Health_Services'
+    host: '23.117.213.174',
+    port: 3369,
+    user: 'Zeke',
+    password: 'TrashPanda6000',
+    database: 'Health_Services'
 };
 // Create a MySQL connection pool
 const pool = mysql.createPool(dbConfig);
@@ -101,52 +101,36 @@ for (let rowNum = startRow; rowNum < endRow; rowNum++) {
     const locationMatch = scheduleText.match(/(USF|CW|VB|IOA)/i);
     employee.Location = locationMatch ? locationMatch[1].toUpperCase() : ''; // Extracted location code
 
- // Extracting time in and time out from the schedule text
-const timeParts = scheduleText.match(/(\d{1,2}:\d{2}(?:AM|PM))\s*-\s*(\d{1,2}:\d{2}(?:AM|PM))/i);
-if (timeParts && timeParts.length === 3) {
-    employee.TimeIn = timeParts[1];
-    employee.TimeOut = timeParts[2];
+    // Extracting time in and time out from the schedule text
+    const timeParts = scheduleText.match(/(\d{1,2}:\d{2}(?:AM|PM))\s*-\s*(\d{1,2}:\d{2}(?:AM|PM))/i);
+    if (timeParts && timeParts.length === 3) {
+        employee.TimeIn = moment(timeParts[1], 'h:mm A').format('HH:mm'); // Convert time to 24-hour format
+        employee.TimeOut = moment(timeParts[2], 'h:mm A').format('HH:mm'); // Convert time to 24-hour format
 
-    // Calculate shift duration in minutes
-    const timeInMinutes = getMinutesFromTimeString(employee.TimeIn);
-    const timeOutMinutes = getMinutesFromTimeString(employee.TimeOut);
-    const shiftDuration = timeOutMinutes - timeInMinutes;
+        // Calculate shift duration in minutes
+        const timeInMinutes = getMinutesFromTimeString(employee.TimeIn);
+        const timeOutMinutes = getMinutesFromTimeString(employee.TimeOut);
+        const shiftDuration = timeOutMinutes - timeInMinutes;
 
-    // Add 30 minutes to TimeOut if shift duration is longer than 6 hours
-    if (shiftDuration > 360) { // 360 minutes = 6 hours
-        const [hours, minutes, period] = employee.TimeOut.split(/:|(?=[AP]M)/); // Split time and period (AM/PM)
-        let newHours = parseInt(hours);
-        let newMinutes = parseInt(minutes) + 30;
-        if (newMinutes >= 60) {
-            newMinutes -= 60;
-            newHours = (newHours + 1) % 12 || 12; // Handle rollover and edge cases
+        // Add 30 minutes to TimeOut if shift duration is longer than 6 hours
+        if (shiftDuration > 360) { // 360 minutes = 6 hours
+            employee.TimeOut = moment(employee.TimeOut, 'HH:mm').add(30, 'minutes').format('HH:mm');
         }
-        employee.TimeOut = `${newHours}:${newMinutes.toString().padStart(2, '0')}${period}`;
+    } else {
+        // If unable to extract, set defaults
+        employee.TimeIn = '';
+        employee.TimeOut = '';
     }
-} else {
-    // If unable to extract, set defaults
-    employee.TimeIn = '';
-    employee.TimeOut = '';
-}
 
-// Function to convert time string to minutes
-function getMinutesFromTimeString(timeString) {
-    const [hours, minutes, period] = timeString.split(/:|(?=[AP]M)/); // Split time and period (AM/PM)
-    let totalMinutes = parseInt(hours) * 60 + parseInt(minutes);
-    if (period.toUpperCase() === 'PM') {
-        totalMinutes += 12 * 60; // Add 12 hours if PM
+    // Function to convert time string to minutes
+    function getMinutesFromTimeString(timeString) {
+        const [hours, minutes] = timeString.split(':'); // Split time into hours and minutes
+        return parseInt(hours) * 60 + parseInt(minutes); // Convert hours and minutes to total minutes
     }
-    return totalMinutes;
-}
-    
 
     // Check if the job title is Lead-Paramedic and set the lead status accordingly
-    if (employee.Job === 'Lead-Paramedic') {
-        employee.StatusLead = true;
-    } else {
-        employee.StatusLead = false;
-    }
-    
+    employee.StatusLead = (employee.Job === 'Lead-Paramedic');
+
     // Calculate total shift duration in minutes and add it to the employee object
     employee.totalShift = calculateTotalShift(employee);
     
@@ -172,19 +156,41 @@ function getMinutesFromTimeString(timeString) {
         }
     }
 }
+
+// Function to clear data from a table
+function clearTable(tableName) {
+    const sql = `DELETE FROM ${tableName}`;
+
+    pool.query(sql, (error, results, fields) => {
+        if (error) {
+            console.error(`Error clearing data from ${tableName}: ${error.message}`);
+        } else {
+            console.log(`Cleared data from ${tableName}`);
+        }
+    });
+}
+
+// Clear data from respective tables before inserting new employees
+clearTable('notParkBased');
+clearTable('universal');
+clearTable('islands');
+clearTable('volcano');
+clearTable('citywalk');
+
+
 // Function to insert employees into the database
 function insertEmployees(employees, tableName) {
-const columns = ['EmployeeName', 'LeadStatus', 'TimeIn', 'TimeOut', 'Incentive', 'Notes'];
-const values = employees.map(employee => [employee.Name, employee.StatusLead ? 'Yes' : 'No', employee.TimeIn, employee.TimeOut, '', employee.Notes]);
-const sql = `INSERT INTO ${tableName} (${columns.join(', ')}) VALUES ?`;
+    const columns = ['EmployeeName', 'LeadStatus', 'TimeIn', 'TimeOut', 'Incentive', 'Notes'];
+    const values = employees.map(employee => [employee.Name, employee.StatusLead ? 'Yes' : 'No', employee.TimeIn, employee.TimeOut, '', employee.Notes]);
+    const sql = `INSERT INTO ${tableName} (${columns.join(', ')}) VALUES ?`;
 
-pool.query(sql, [values], (error, results, fields) => {
-    if (error) {
-        console.error(`Error inserting employees into ${tableName}: ${error.message}`);
-    } else {
-        console.log(`Inserted ${results.affectedRows} employees into ${tableName}`);
-    }
-});
+    pool.query(sql, [values], (error, results, fields) => {
+        if (error) {
+            console.error(`Error inserting employees into ${tableName}: ${error.message}`);
+        } else {
+            console.log(`Inserted ${results.affectedRows} employees into ${tableName}`);
+        }
+    });
 }
 
 // Insert employees into respective tables
@@ -193,7 +199,6 @@ insertEmployees(ISLANDS, 'islands');
 insertEmployees(VolcanoBay, 'volcano');
 insertEmployees(CityWalk, 'citywalk');
 insertEmployees(NotParkBased, 'notParkBased');
-
 
 // Print the arrays of employees based on work location to the console
 console.log('Employees at UNIVERSAL:');
