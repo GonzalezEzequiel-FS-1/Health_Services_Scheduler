@@ -13,7 +13,8 @@ const dbConfig = {
     database: 'Health_Services'
 };
 // Create a MySQL connection pool
-const pool = mysql.createPool(dbConfig);
+const pool = mysql.createPool(dbConfig)
+
 
 // Function to get the latest file in a folder
 function getLatestFile(folderPath) {
@@ -134,7 +135,7 @@ for (let rowNum = startRow; rowNum < endRow; rowNum++) {
     // Calculate total shift duration in minutes and add it to the employee object
     employee.totalShift = calculateTotalShift(employee);
     
-    // Exclude employees with totalShift === 30
+    // Exclude employees with totalShift > 30
     if (employee.totalShift > 30) {
         // Push the employee to the corresponding array
         switch (employee.Location) {
@@ -172,6 +173,7 @@ function clearTable(tableName) {
 
 // Clear data from respective tables before inserting new employees
 clearTable('notParkBased');
+
 clearTable('universal');
 clearTable('islands');
 clearTable('volcano');

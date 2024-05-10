@@ -15,6 +15,27 @@ const dbConfig = {
 // Create a MySQL connection pool
 const pool = mysql.createPool(dbConfig);
 
+// Function to clear data from a table
+function clearTable(tableName) {
+    const sql = `DELETE FROM ${tableName}`;
+    
+    pool.query(sql, (error, results, fields) => {
+        if (error) {
+            console.error(`Error clearing data from ${tableName}: ${error.message}`);
+        } else {
+            console.log(`Cleared data from ${tableName}`);
+        }
+    });
+}
+
+// Clear data from respective tables before inserting new employees
+
+clearTable('universal');
+clearTable('islands');
+clearTable('volcano');
+clearTable('citywalk');
+clearTable('notParkBased');
+
 // Function to get the latest file in a folder
 function getLatestFile(folderPath) {
     const files = fs.readdirSync(folderPath);
@@ -157,25 +178,7 @@ for (let rowNum = startRow; rowNum < endRow; rowNum++) {
     }
 }
 
-// Function to clear data from a table
-function clearTable(tableName) {
-    const sql = `DELETE FROM ${tableName}`;
 
-    pool.query(sql, (error, results, fields) => {
-        if (error) {
-            console.error(`Error clearing data from ${tableName}: ${error.message}`);
-        } else {
-            console.log(`Cleared data from ${tableName}`);
-        }
-    });
-}
-
-// Clear data from respective tables before inserting new employees
-clearTable('notParkBased');
-clearTable('universal');
-clearTable('islands');
-clearTable('volcano');
-clearTable('citywalk');
 
 
 // Function to insert employees into the database
