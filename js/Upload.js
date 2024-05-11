@@ -285,7 +285,7 @@ setTimeout(() => {
     insertEmployees(CityWalk, 'citywalk');
     insertEmployees(ISLANDS, 'islands');
     insertEmployees(NotParkBased, 'notParkBased');
-
+    
     // Call function to close the database connection after 6 seconds
     setTimeout(closeConnection, 4000); // 4000 milliseconds = 4 seconds
 }, 3000); // 3000 milliseconds = 3 seconds
