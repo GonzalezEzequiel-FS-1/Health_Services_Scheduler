@@ -22,12 +22,12 @@ function clearTable(tableName, callback) {
     pool.query(sql, (error, results, fields) => {
         if (error) {
             console.error(`Error clearing data from ${tableName}: ${error.message}`);
-            if (callback) {
+            if (callback && typeof callback === 'function') {
                 callback(error);
             }
         } else {
             console.log(`Cleared data from ${tableName}`);
-            if (callback) {
+            if (callback && typeof callback === 'function') {
                 callback(null);
             }
         }
@@ -44,13 +44,18 @@ function insertEmployees(employees, tableName, callback) {
     pool.query(sql, [values], (error, results, fields) => {
         if (error) {
             console.error(`Error inserting employees into ${tableName}: ${error.message}`);
-            callback(error);
+            if (callback) {
+                callback(error);
+            }
         } else {
             console.log(`Inserted ${results.affectedRows} employees into ${tableName}`);
-            callback(null);
+            if (callback) {
+                callback(null);
+            }
         }
     });
 }
+
 
 // Function to get the latest file in a folder based on the date in the file name
 function getLatestFile(folderPath) {
@@ -253,42 +258,63 @@ for (let rowNum = startRow; rowNum < endRow; rowNum++) {
 }
 
 
-
-
-// Function to insert employees into the database
-function insertEmployees(employees, tableName) {
-    const columns = ['EmployeeName', 'LeadStatus', 'TimeIn', 'TimeOut', 'Incentive', 'Notes'];
-    const values = employees.map(employee => [employee.Name, employee.StatusLead ? 'Yes' : 'No', employee.TimeIn, employee.TimeOut, '', employee.Notes]);
-    const sql = `INSERT INTO ${tableName} (${columns.join(', ')}) VALUES ?`;
-
-    pool.query(sql, [values], (error, results, fields) => {
-        if (error) {
-            console.error(`Error inserting employees into ${tableName}: ${error.message}`);
-        } else {
-            console.log(`Inserted ${results.affectedRows} employees into ${tableName}`);
-        }
-    });
-}
-
-// Clear data from respective tables before inserting new employees
-// clearTable('universal');
-// clearTable('volcano');
-// clearTable('citywalk');
-// clearTable('islands');
-// clearTable('notParkBased');
-
 // Wait for 3 seconds before inserting employees
 setTimeout(() => {
     // Insert employees into respective tables
-    insertEmployees(UNIVERSAL, 'universal');
-    insertEmployees(VolcanoBay, 'volcano');
-    insertEmployees(CityWalk, 'citywalk');
-    insertEmployees(ISLANDS, 'islands');
-    insertEmployees(NotParkBased, 'notParkBased');
-    
-    // Call function to close the database connection after 6 seconds
-    setTimeout(closeConnection, 4000); // 4000 milliseconds = 4 seconds
+    insertEmployees(UNIVERSAL, 'universal', (error) => {
+        if (!error) {
+            insertEmployees(VolcanoBay, 'volcano', (error) => {
+                if (!error) {
+                    insertEmployees(CityWalk, 'citywalk', (error) => {
+                        if (!error) {
+                            insertEmployees(ISLANDS, 'islands', (error) => {
+                                if (!error) {
+                                    insertEmployees(NotParkBased, 'notParkBased', (error) => {
+                                        if (!error) {
+                                            // Execute ALTER TABLE commands before closing the connection
+                                            const alterCommands = [
+                                                "ALTER TABLE `Health_Services`.`citywalk` ORDER BY TimeIn ASC",
+                                                "ALTER TABLE `Health_Services`.`volcano` ORDER BY TimeIn ASC",
+                                                "ALTER TABLE `Health_Services`.`islands` ORDER BY TimeIn ASC",
+                                                "ALTER TABLE `Health_Services`.`notParkBased` ORDER BY TimeIn ASC",
+                                                "ALTER TABLE `Health_Services`.`universal` ORDER BY TimeIn ASC"
+                                            ];
+
+                                            // Execute each ALTER TABLE command
+                                            alterCommands.forEach(command => {
+                                                pool.query(command, (error, results, fields) => {
+                                                    if (error) {
+                                                        console.error(`Error executing ALTER TABLE command: ${error.message}`);
+                                                    } else {
+                                                        console.log(`Successfully executed ALTER TABLE command: ${command}`);
+                                                    }
+                                                });
+                                            });
+
+                                            // Call function to close the database connection after 4 seconds
+                                            setTimeout(closeConnection, 4000); // 4000 milliseconds = 4 seconds
+                                        } else {
+                                            console.error("Error inserting employees into 'notParkBased'");
+                                        }
+                                    });
+                                } else {
+                                    console.error("Error inserting employees into 'islands'");
+                                }
+                            });
+                        } else {
+                            console.error("Error inserting employees into 'citywalk'");
+                        }
+                    });
+                } else {
+                    console.error("Error inserting employees into 'volcano'");
+                }
+            });
+        } else {
+            console.error("Error inserting employees into 'universal'");
+        }
+    });
 }, 3000); // 3000 milliseconds = 3 seconds
+
 
 // Function to close the database connection
 function closeConnection() {
@@ -314,3 +340,4 @@ console.log(CityWalk);
 console.log('Employees at Not Park Based:');
 console.log(NotParkBased);
 console.log(`Retrieved latest file: ${latestFile}`); // Log the name of the retrieved file
+

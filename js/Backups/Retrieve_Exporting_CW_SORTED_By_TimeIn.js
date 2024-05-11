@@ -17,7 +17,7 @@ const smartsheetToken = "vRF9IrGXepLhGkB5CwehrGRbt7oOy5oEmP4Rd";
 const sheetID = "6561699532328836";
 
 // Column IDs
-const cwColumnIds = {
+const columnIds = {
     Employee: 1223039130750852,
     LeadStatus: 5726638758121348,
     TimeIn: 3474838944436100,
@@ -87,7 +87,7 @@ function retrieveSortedDataFromDatabase() {
 
 
 // Function to add row to Smartsheet
-async function addRowToSheet(cwColumnIds) {
+async function addRowToSheet(columnIds) {
     try {
         // Retrieve sorted data from the database
         const dataFromDB = await retrieveSortedDataFromDatabase();
@@ -106,12 +106,12 @@ async function addRowToSheet(cwColumnIds) {
             const rowToAdd = {
                 toTop: true,
                 cells: [
-                    { columnId: cwColumnIds.Employee, value: employeeData },
-                    { columnId: cwColumnIds.LeadStatus, value: leadStatusData },
-                    { columnId: cwColumnIds.TimeIn, value: timeInData },
-                    { columnId: cwColumnIds.TimeOut, value: timeOutData },
-                    { columnId: cwColumnIds.Incentive, value: incentiveData },
-                    { columnId: cwColumnIds.Notes, value: notesData }
+                    { columnId: columnIds.Employee, value: employeeData },
+                    { columnId: columnIds.LeadStatus, value: leadStatusData },
+                    { columnId: columnIds.TimeIn, value: timeInData },
+                    { columnId: columnIds.TimeOut, value: timeOutData },
+                    { columnId: columnIds.Incentive, value: incentiveData },
+                    { columnId: columnIds.Notes, value: notesData }
                 ]
             };
 
@@ -141,7 +141,7 @@ async function addRowToSheet(cwColumnIds) {
 clearAllRows()
     .then(() => {
         // Then add the data from the database to Smartsheet after clearing rows
-        addRowToSheet(cwColumnIds);
+        addRowToSheet(columnIds);
     })
     .catch(err => {
         console.error("Error:", err);
