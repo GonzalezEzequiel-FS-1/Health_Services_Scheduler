@@ -1,3 +1,4 @@
+
 const axios = require('axios');
 const mysql = require('mysql');
 
@@ -12,18 +13,16 @@ const dbConfig = {
 
 // Smartsheet API token and sheet ID
 const smartsheetToken = "vRF9IrGXepLhGkB5CwehrGRbt7oOy5oEmP4Rd";
-// Official Token: "vwM6AHwhUlFPs5pLk5WIqzt82FSqWkoOeIqyp"
-// Backup Token: vRF9IrGXepLhGkB5CwehrGRbt7oOy5oEmP4Rd
-const sheetID = "6561699532328836";
+const sheetID = "1724277866844036";
 
 // Column IDs
-const cwColumnIds = {
-    Employee: 1223039130750852,
-    LeadStatus: 5726638758121348,
-    TimeIn: 3474838944436100,
-    TimeOut: 7978438571806596,
-    Incentive: 660089177329540,
-    Notes: 5163688804700036
+const columnIds = {
+    Employee: 5712940496801668,
+    LeadStatus: 3461140683116420,
+    TimeIn: 7964740310486916,
+    TimeOut: 646390916009860,
+    Incentive: 5149990543380356,
+    Notes: 2898190729695108
 };
 
 // Create a connection to the database
@@ -69,28 +68,27 @@ async function clearAllRows() {
     }
 }
 
-// Function to retrieve sorted data from the database
-function retrieveSortedDataFromDatabase() {
+// Function to retrieve data from the database
+function retrieveDataFromDatabase() {
     return new Promise((resolve, reject) => {
-        console.log("Retrieving sorted data from the database...");
-        const query = "SELECT EmployeeName, LeadStatus, TimeIn, TimeOut, Incentive, Notes FROM CityWalkSchedule ORDER BY TimeIn DESC";
+        console.log("Retrieving data from the database...");
+        const query = "SELECT EmployeeName, LeadStatus, TimeIn, TimeOut, Incentive, Notes FROM universal";
         connection.query(query, (err, results) => {
             if (err) {
                 reject(err);
                 return;
             }
-            console.log("Retrieved sorted data from the database successfully:", results);
+            console.log("Retrieved data from the database successfully:", results);
             resolve(results);
         });
     });
 }
 
-
 // Function to add row to Smartsheet
-async function addRowToSheet(cwColumnIds) {
+async function addRowToSheet(columnIds) {
     try {
-        // Retrieve sorted data from the database
-        const dataFromDB = await retrieveSortedDataFromDatabase();
+        // Retrieve data from the database
+        const dataFromDB = await retrieveDataFromDatabase();
         
         // Iterate over each row of data retrieved from the database
         for (const row of dataFromDB) {
@@ -106,42 +104,49 @@ async function addRowToSheet(cwColumnIds) {
             const rowToAdd = {
                 toTop: true,
                 cells: [
-                    { columnId: cwColumnIds.Employee, value: employeeData },
-                    { columnId: cwColumnIds.LeadStatus, value: leadStatusData },
-                    { columnId: cwColumnIds.TimeIn, value: timeInData },
-                    { columnId: cwColumnIds.TimeOut, value: timeOutData },
-                    { columnId: cwColumnIds.Incentive, value: incentiveData },
-                    { columnId: cwColumnIds.Notes, value: notesData }
+                    { columnId: columnIds.Employee, value: employeeData },
+                    { columnId: columnIds.LeadStatus, value: leadStatusData },
+                    { columnId: columnIds.TimeIn, value: timeInData },
+                    { columnId: columnIds.TimeOut, value: timeOutData },
+                    { columnId: columnIds.Incentive, value: incentiveData },
+                    { columnId: columnIds.Notes, value: notesData }
                 ]
             };
 
             // Add row to Smartsheet
-            console.log("Adding row to Smartsheet:", rowToAdd);
-            await axios.post(`https://api.smartsheet.com/2.0/sheets/${sheetID}/rows`, rowToAdd, {
-                headers: {
-                    'Authorization': `Bearer ${smartsheetToken}`
-                }
-            });
-            console.log("Row added successfully.");
+            await attemptToAddRow(rowToAdd);
         }
 
         console.log("All rows added successfully.");
     } catch (error) {
-        if (error.response) {
-            console.error("Error adding rows:", error.response.data);
-        } else {
-            console.error("Error adding rows:", error.message);
-        }
+        console.error("Error:", error);
     }
 }
 
-
+// Function to attempt adding a row to Smartsheet
+async function attemptToAddRow(rowToAdd) {
+    try {
+        console.log("Adding row to Smartsheet:", rowToAdd);
+        await axios.post(`https://api.smartsheet.com/2.0/sheets/${sheetID}/rows`, rowToAdd, {
+            headers: {
+                'Authorization': `Bearer ${smartsheetToken}`
+            }
+        });
+        console.log("Row added successfully.");
+    } catch (error) {
+        if (error.response && error.response.status === 4004) {
+            console.error("Request failed due to conflict. Terminating the request.");
+        } else {
+            throw error;
+        }
+    }
+}
 
 // Clear all rows from the sheet first
 clearAllRows()
     .then(() => {
         // Then add the data from the database to Smartsheet after clearing rows
-        addRowToSheet(cwColumnIds);
+        addRowToSheet(columnIds);
     })
     .catch(err => {
         console.error("Error:", err);
